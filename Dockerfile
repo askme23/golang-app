@@ -14,13 +14,13 @@ RUN apk update && apk add --no-cache git
 WORKDIR /app
 
 # Copy go mod and sum files 
-COPY go.mod go.sum ./
-
-# Download all dependencies. Dependencies will be cached if the go.mod and the go.sum files are not changed 
-RUN go mod download 
+#COPY go.mod go.sum ./
 
 # Copy the source from the current directory to the working Directory inside the container 
 COPY . .
+
+# Download all dependencies. Dependencies will be cached if the go.mod and the go.sum files are not changed 
+RUN go mod download 
 
 # Build the Go app
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
