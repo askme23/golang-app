@@ -1,0 +1,8 @@
+@font-face {
+  font-family: 'Iosevka Sparkle Web';
+  font-display: swap;
+  font-weight: 500;
+  font-stretch: normal;
+  font-style: normal;
+  src: url('iosevka/woff2/iosevka-sparkle-medium.woff2') format('woff2'), url('iosevka/woff/iosevka-sparkle-medium.woff') format('woff');
+}
