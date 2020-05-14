@@ -41,8 +41,8 @@ func (server *Server) Initialize(/*Dbdriver, DbUser, DbPassword, DbPort, DbHost,
 }
 
 func (s *Server) initializeRoutes() {
-	s.Router.HandleFunc("/", middlewares.SetMiddlewareJSON(s.Home)).Methods("GET")
-	s.Router.HandleFunc("/login", middlewares.SetMiddlewareJSON(s.Login)).Methods("POST")
+	s.Router.HandleFunc("/", middlewares.SetMiddlewareJSON(s.Home)).Methods("GET", "OPTIONS")
+	s.Router.HandleFunc("/login", s.Login).Methods("POST", "OPTIONS")
 	// s.Router.HandleFunc("/logout", middlewares.SetMiddlewareJSON(s.Login)).Methods("POST")
 
 	//Users routes

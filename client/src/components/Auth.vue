@@ -1,6 +1,6 @@
 <template>
   <div class="d-flex justify-content-center">
-    <b-form id="login-form" @submit="onSubmit" @reset="onReset" v-if="show">
+    <b-form id="login-form" @submit="onSubmit" v-if="show">
       <b-form-group
         id="input-group-1"
         label="Email address:"
@@ -33,6 +33,8 @@
 </template>
 
 <script>
+import axios from 'axios';
+
 export default {
   name: 'Auth',
   data() {
@@ -47,17 +49,32 @@ export default {
   methods: {
     onSubmit(evt) {
       evt.preventDefault();
-      alert(JSON.stringify(this.form));
+
+      const path = 'http://localhost:8081/login';
+      axios({
+        url: path,
+        method: 'POST',
+        data: {
+          email: this.form.email,
+          password: this.form.password,
+        },
+      })
+        .then((response) => {
+          console.log(response);
+        })
+        .catch((error) => {
+          console.log(error);
+        });
     },
-    onReset(evt) {
-      evt.preventDefault();
-      this.form.email = '';
-      this.form.password = '';
-      this.show = false;
-      this.$nextTick(() => {
-        this.show = true;
-      });
-    },
+    // onReset(evt) {
+    //   evt.preventDefault();
+    //   this.form.email = '';
+    //   this.form.password = '';
+    //   this.show = false;
+    //   this.$nextTick(() => {
+    //     this.show = true;
+    //   });
+    // },
   },
 };
 </script>

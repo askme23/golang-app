@@ -14,7 +14,10 @@ import (
 )
 
 func (server *Server) Login(w http.ResponseWriter, r *http.Request) {
-	fmt.Println(r)
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+  w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+	fmt.Fprintf(w, "it's login request")
 	// body, err := ioutil.ReadAll(r.Body)
 	// if err != nil {
 	// 	responses.ERROR(w, http.StatusUnprocessableEntity, err)
