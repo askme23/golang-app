@@ -14,15 +14,14 @@ import (
 )
 
 type Person struct {
-  email string `//json:"email""`
-  password string //`json:"password"`
+  Email string `json:"email""`
+  Password string `json:"password"`
 }
   
 func (server *Server) Login(w http.ResponseWriter, r *http.Request) {
   w.Header().Set("Access-Control-Allow-Origin", "*")
   w.Header().Set("Access-Control-Allow-Headers", "Content-Type")  
 
-  fmt.Println(r.Header.Get("Content-Type"))
   // Just skip and are waiting request with another method
   if r.Method == "OPTIONS" {
     return
@@ -41,18 +40,14 @@ func (server *Server) Login(w http.ResponseWriter, r *http.Request) {
   
   // fmt.Printf("%s\n", body)
   
-  
+  // var person Person
   // err = json.Unmarshal(body, &person)
   // if err != nil {
   //   http.Error(w, "Something gona wrong", http.StatusUnprocessableEntity)
   //   return
   // }
 
-  // fmt.Printf("%v", person)
-  
-  r.Body = http.MaxBytesReader(w, r.Body, 1048576)
   decoder := json.NewDecoder(r.Body)
-  decoder.DisallowUnknownFields()
 
   var person Person
   err:= decoder.Decode(&person)
