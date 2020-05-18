@@ -6,10 +6,11 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/gorilla/sessions"
+	"github.com/gorilla/securecookie"
 	"github.com/jinzhu/gorm"
 
 	_ "github.com/jinzhu/gorm/dialects/postgres"
-
 	_ "github.com/askme23/golang-app/api/models"
 	"github.com/askme23/golang-app/api/middlewares"
 )
@@ -19,8 +20,20 @@ type Server struct {
 	Router *mux.Router
 }
 
+var store *sessions.CookieStore
 func (server *Server) Initialize(/*Dbdriver, DbUser, DbPassword, DbPort, DbHost, DbName string*/) {
+	authKeyOne := securecookie.GenerateRandomKey(64)
+	encryptionKeyOne := securecookie.GenerateRandomKey(32)
 
+	store = sessions.NewCookieStore(
+		authKeyOne,
+		encryptionKeyOne,
+	)
+
+	store.Options = &sessions.Options{
+		MaxAge:   60 * 60,
+		HttpOnly: true,
+	}
 	// var err error
 
 	// if Dbdriver == "postgres" {
