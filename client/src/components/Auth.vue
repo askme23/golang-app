@@ -51,9 +51,11 @@ export default {
       evt.preventDefault();
 
       const path = 'http://localhost:8081/login';
+      const self = this;
       axios({
         url: path,
         method: 'POST',
+        withCredentials: true,
         data: {
           email: this.form.email,
           password: this.form.password,
@@ -61,6 +63,7 @@ export default {
       })
         .then((response) => {
           console.log(response);
+          self.$router.push({ name: 'Home'})
         })
         .catch((error) => {
           console.log(error);

@@ -6,13 +6,14 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/gorilla/sessions"
+	_ "github.com/gorilla/sessions"
 	"github.com/gorilla/securecookie"
 	"github.com/jinzhu/gorm"
 
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	_ "github.com/askme23/golang-app/api/models"
 	"github.com/askme23/golang-app/api/middlewares"
+	"github.com/gomodule/redigo/redis"
 )
 
 type Server struct {
@@ -20,20 +21,14 @@ type Server struct {
 	Router *mux.Router
 }
 
-var store *sessions.CookieStore
+var hashKey = securecookie.GenerateRandomKey(64)
+var blockKey = securecookie.GenerateRandomKey(32)
+var s = securecookie.New(hashKey, blockKey)
+var cache redis.Conn
+
 func (server *Server) Initialize(/*Dbdriver, DbUser, DbPassword, DbPort, DbHost, DbName string*/) {
-	authKeyOne := securecookie.GenerateRandomKey(64)
-	encryptionKeyOne := securecookie.GenerateRandomKey(32)
+	
 
-	store = sessions.NewCookieStore(
-		authKeyOne,
-		encryptionKeyOne,
-	)
-
-	store.Options = &sessions.Options{
-		MaxAge:   60 * 60,
-		HttpOnly: true,
-	}
 	// var err error
 
 	// if Dbdriver == "postgres" {
@@ -51,6 +46,7 @@ func (server *Server) Initialize(/*Dbdriver, DbUser, DbPassword, DbPort, DbHost,
 
 	server.Router = mux.NewRouter()
 	server.initializeRoutes()
+	initCache()
 }
 
 func (s *Server) initializeRoutes() {
@@ -71,6 +67,14 @@ func (s *Server) initializeRoutes() {
 	// s.Router.HandleFunc("/posts/{id}", middlewares.SetMiddlewareJSON(s.GetPost)).Methods("GET")
 	// s.Router.HandleFunc("/posts/{id}", middlewares.SetMiddlewareJSON(middlewares.SetMiddlewareAuthentication(s.UpdatePost))).Methods("PUT")
 	// s.Router.HandleFunc("/posts/{id}", middlewares.SetMiddlewareAuthentication(s.DeletePost)).Methods("DELETE")
+}
+
+func initCache() {
+	conn, err := redis.DialURL("redis://localhost:6379")
+	if err != nil {
+		panic(err)
+	}
+	cache = conn
 }
 
 func (server *Server) Run(addr string) {

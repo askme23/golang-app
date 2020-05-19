@@ -1,19 +1,19 @@
 package controllers
 
 import (
-	_ "database/sql"
-	_ "encoding/json"
+	"database/sql"
+	"encoding/json"
 	"fmt"
-  _ "log"
-	_ "os"
+  "log"
+	"os"
 	"net/http"
-  _ "time"
+  "time"
 
 	_ "github.com/askme23/golang-app/api/auth"
 	_ "github.com/askme23/golang-app/api/models"
 	_ "github.com/askme23/golang-app/api/responses"
 	_ "github.com/askme23/golang-app/api/utils/formaterror"
-	_ "github.com/joho/godotenv"
+	"github.com/joho/godotenv"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -23,8 +23,11 @@ type Person struct {
 }
 
 func (server *Server) Login(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	// w.Header().Set("Access-Control-Allow-Origin", "*")
+	// w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:8080")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept")
 
 	// Just skip and are waiting request with another method
 	if r.Method == "OPTIONS" {
@@ -36,126 +39,104 @@ func (server *Server) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-  session, err := store.Get(r, "hello") 
-  if err != nil {
-    http.Error(w, err.Error(), http.StatusInternalServerError)
+	var person Person
+	var err = json.NewDecoder(r.Body).Decode(&person)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err = godotenv.Load(); err != nil {
+		log.Fatalf("Error getting env, not comming through %v", err)
+	} else {
+		fmt.Println("We are getting the env values")
+	}
+
+	var (
+		host     = os.Getenv("DB_HOST")
+		port     = os.Getenv("DB_PORT")
+		user     = os.Getenv("DB_USER")
+		dbname   = os.Getenv("DB_NAME")
+		password = os.Getenv("DB_PASSWORD")
+	)
+	dbConnect := fmt.Sprintf("host=%s port=%s user=%s dbname=%s sslmode=disable password=%s", host, port, user, dbname, password)
+
+	db, err := sql.Open("postgres", dbConnect)
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
+	err = db.Ping()
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("You are Successfully connected!")
+
+  // Checking the existence of the user in the person table.
+  var storePassword string
+  row := db.QueryRow("select password from person where email = $1", person.Email)
+  err = row.Scan(&storePassword)
+  if err == sql.ErrNoRows {
+    http.Error(w, "Incorrect email or password.", 404)
+    return
+    // hash, _ := Hash(person.Password)
+    // result, err := db.Exec("INSERT INTO person(email, password, when_created, when_updated) VALUES($1, $2, $3, $4)", person.Email, hash, time.Now(), time.Now())
+
+    // if err != nil {
+    //     fmt.Println(err)
+    //     http.Error(w, http.StatusText(500), 500)
+    //     return
+    // }
+
+    // if _, err := result.RowsAffected(); err != nil {
+    //     http.Error(w, http.StatusText(500), 500)
+    //     return
+    // }
+
+    // fmt.Println("User is added")
+  } else if err != nil {
+    http.Error(w, http.StatusText(500), 500)
     return
   }
-  
-  fmt.Printf("%+v", session)
 
-  err = session.Save(r, w)
-  if err != nil {
-      http.Error(w, err.Error(), http.StatusInternalServerError)
+  if len(storePassword) > 0 {
+    _, err := server.SignIn(person.Password, storePassword)
+    if err != nil {
+      http.Error(w, http.StatusText(500), 500)
       return
+    }
+
+    // create cookie
+    sessionValue := map[string]string {
+    	"email": person.Email,
+    }
+
+    if hash, err := s.Encode("cookie-login", sessionValue); err == nil {
+    	fmt.Println()
+    	_, err = cache.Do("SETEX", hash, "120", person.Email)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+
+      http.SetCookie(w, &http.Cookie{
+				Name:    "cookie-login",
+				Value:   hash,
+				Expires: time.Now().Add(120 * time.Second),
+			})
+    }
   }
-  
-
-
-
-	// var person Person
-	// err = json.NewDecoder(r.Body).Decode(&person)
-	// if err != nil {
-	// 	http.Error(w, err.Error(), http.StatusBadRequest)
-	// 	return
-	// }
-
-	// err = godotenv.Load()
-	// if err != nil {
-	// 	log.Fatalf("Error getting env, not comming through %v", err)
-	// } else {
-	// 	fmt.Println("We are getting the env values")
-	// }
-
-	// var (
-	// 	host     = os.Getenv("DB_HOST")
-	// 	port     = os.Getenv("DB_PORT")
-	// 	user     = os.Getenv("DB_USER")
-	// 	dbname   = os.Getenv("DB_NAME")
-	// 	password = os.Getenv("DB_PASSWORD")
-	// )
-	// dbConnect := fmt.Sprintf("host=%s port=%s user=%s dbname=%s sslmode=disable password=%s", host, port, user, dbname, password)
-
-	// db, err := sql.Open("postgres", dbConnect)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// defer db.Close()
-
-	// err = db.Ping()
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// fmt.Println("You are Successfully connected!")
-
- //  // Checking the existence of the user in the person table.
- //  var storePassword string
- //  row := db.QueryRow("select password from person where email = $1", person.Email)
- //  err = row.Scan(&storePassword)
- //  if err == sql.ErrNoRows {
- //    http.Error(w, "Incorrect email or password.", 404)
- //    return
- //    // hash, _ := Hash(person.Password)
- //    // result, err := db.Exec("INSERT INTO person(email, password, when_created, when_updated) VALUES($1, $2, $3, $4)", person.Email, hash, time.Now(), time.Now())
-
- //    // if err != nil {
- //    //     fmt.Println(err)
- //    //     http.Error(w, http.StatusText(500), 500)
- //    //     return
- //    // }
-
- //    // if _, err := result.RowsAffected(); err != nil {
- //    //     http.Error(w, http.StatusText(500), 500)
- //    //     return
- //    // }
-
- //    // fmt.Println("User is added")
- //  } else if err != nil {
- //    http.Error(w, http.StatusText(500), 500)
- //    return
- //  }
-
- //  if len(storePassword) > 0 {
- //    _, err := server.SignIn(person.Password, storePassword)
-
- //    if err != nil {
- //      http.Error(w, http.StatusText(500), 500)
- //      return
- //    }
- //  }
-
-
-
-
-
-
-	fmt.Fprintf(w, "it's login request")
-
-	// user.Prepare()
-	// err = user.Validate("login")
-	// if err != nil {
-	//  responses.ERROR(w, http.StatusUnprocessableEntity, err)
-	//  return
-	// }
-	// token, err := server.SignIn(user.Email, user.Password)
-	// if err != nil {
-	//  formattedError := formaterror.FormatError(err.Error())
-	//  responses.ERROR(w, http.StatusUnprocessableEntity, formattedError)
-	//  return
-	// }
-	// responses.JSON(w, http.StatusOK, token)
 }
 
 func (server *Server) SignIn(password string, storePassword string) (string, error) {
-
 	var err error
-
 	err = VerifyPassword(password, storePassword)
 	if err != nil && err == bcrypt.ErrMismatchedHashAndPassword {
 		return "", err
 	}
   fmt.Println("Passwords are equal")
-	return "", nil//auth.CreateToken(user.ID)
+	return "", nil
 }
 
 func Hash(password string) ([]byte, error) {
