@@ -63,7 +63,7 @@ export default {
       })
         .then((response) => {
           console.log(response);
-          self.$router.push({ name: 'Home'})
+          self.$router.push({ name: 'Home' });
         })
         .catch((error) => {
           console.log(error);

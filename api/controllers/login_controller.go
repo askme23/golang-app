@@ -15,6 +15,7 @@ import (
 	_ "github.com/askme23/golang-app/api/utils/formaterror"
 	"github.com/joho/godotenv"
 	"golang.org/x/crypto/bcrypt"
+	jwt "github.com/dgrijalva/jwt-go"
 )
 
 type Person struct {
@@ -126,8 +127,47 @@ func (server *Server) Login(w http.ResponseWriter, r *http.Request) {
 				Expires: time.Now().Add(120 * time.Second),
 			})
     }
+
+    generateTokens()
   }
 }
+
+// В дальнейшем вынести в отдельный файл
+func generateTokens() {
+	generateAccessToken()
+	generateRefreshToken()
+}
+
+func generateAccessToken() error {
+	accessToken := jwt.New(jwt.SigningMethodHS256)
+	claims := accessToken.Claims.(jwt.MapClaims)
+	claims["name"] = "Gorelov Ruslan"
+  claims["admin"] = true
+  // claims["exp"] = time.Now().Add(time.Hour * 72).Unix()
+  claims["exp"] = time.Now().Add(time.Second * 120).Unix()
+
+  t, err := accessToken.SignedString([]byte(os.Getenv("API_SECRET")))
+  if err != nil {
+      return err
+  }
+  fmt.Println(t)
+  return nil
+}
+
+func generateRefreshToken() error {
+	refreshToken := jwt.New(jwt.SigningMethodHS256)
+	claims := refreshToken.Claims.(jwt.MapClaims)
+	claims["sub"] = 1
+  claims["exp"] = time.Now().Add(time.Hour * 2).Unix()
+
+  t, err := refreshToken.SignedString([]byte(os.Getenv("API_SECRET")))
+  if err != nil {
+      return err
+  }
+  fmt.Println(t)
+  return nil
+}
+
 
 func (server *Server) SignIn(password string, storePassword string) (string, error) {
 	var err error
