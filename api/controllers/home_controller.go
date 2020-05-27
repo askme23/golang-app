@@ -3,7 +3,9 @@ package controllers
 import (
 	"net/http"
 	"fmt"
+	"os"
 	_ "github.com/askme23/golang-app/api/responses"
+	jwt "github.com/dgrijalva/jwt-go"
 )
 
 func (server *Server) Home(w http.ResponseWriter, r *http.Request) {
@@ -16,31 +18,75 @@ func (server *Server) Home(w http.ResponseWriter, r *http.Request) {
 		return
 	} 
 
-	c, err := r.Cookie("cookie-login")
+	access, err := r.Cookie("jwt_access")
+	fmt.Println(access.Value)
 	if err != nil {
 		if err == http.ErrNoCookie {
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-		// For any other type of error, return a bad request status
+			refresh, err := r.Cookie("jwt_refresh")
+			if err != nil && err == http.ErrNoCookie {
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+
+			token, err := VerifyToken(refresh.Value, "refresh")
+			if err != nil {
+				return
+		  }
+		  fmt.Println(token)
+		  if _, ok := token.Claims.(jwt.Claims); !ok && !token.Valid {
+		    return
+		  }
+		}	
+
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	sessionToken := c.Value
+	
+	//todo здесь проверка валидности access токена
+
+
+	// if err != nil {
+	// 	if err == http.ErrNoCookie {
+	// 		w.WriteHeader(http.StatusUnauthorized)
+	// 		return
+	// 	}
+	// 	// For any other type of error, return a bad request status
+	// 	w.WriteHeader(http.StatusBadRequest)
+	// 	return
+	// }
+	// sessionToken := c.Value
 	// fmt.Println(sessionToken)
 
 	// We then get the name of the user from our cache, where we set the session token
-	response, err := cache.Do("GET", sessionToken)
-	if err != nil {
-		// If there is an error fetching from cache, return an internal server error status
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	if response == nil {
-		// If the session token is not present in cache, return an unauthorized error
-		w.WriteHeader(http.StatusUnauthorized)
-		return
-	}
-	// Finally, return the welcome message to the user
-	w.Write([]byte(fmt.Sprintf("%s", response)))
+	// response, err := cache.Do("GET", sessionToken)
+	// if err != nil {
+	// 	// If there is an error fetching from cache, return an internal server error status
+	// 	w.WriteHeader(http.StatusInternalServerError)
+	// 	return
+	// }
+	// if response == nil {
+	// 	// If the session token is not present in cache, return an unauthorized error
+	// 	w.WriteHeader(http.StatusUnauthorized)
+	// 	return
+	// }
+	// // Finally, return the welcome message to the user
+	// w.Write([]byte(fmt.Sprintf("%s", response)))
+}
+
+func VerifyToken(tokenString string, tokenType string) (*jwt.Token, error) {
+  token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+     if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
+        return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+     }
+
+		if tokenType == "refresh" { 
+			return []byte(os.Getenv("REFRESH_SECRET")), nil
+		} else {
+			return []byte(os.Getenv("ACCESS_TOKEN")), nil
+		}
+	})
+  if err != nil {
+     return nil, err
+  }
+  return token, nil
 }

@@ -108,37 +108,57 @@ func (server *Server) Login(w http.ResponseWriter, r *http.Request) {
       return
     }
 
-    // create cookie
-    sessionValue := map[string]string {
-    	"email": person.Email,
+   //  sessionValue := map[string]string {
+   //  	"email": person.Email,
+   //  }
+
+   //  if hash, err := s.Encode("cookie-login", sessionValue); err == nil {
+   //  	_, err = cache.Do("SETEX", hash, "120", person.Email)
+			// if err != nil {
+			// 	w.WriteHeader(http.StatusInternalServerError)
+			// 	return
+			// }
+
+   //    http.SetCookie(w, &http.Cookie{
+			// 	Name:    "cookie-login",
+			// 	Value:   hash,
+			// 	Expires: time.Now().Add(120 * time.Second),
+			// })
+   //  }
+
+    access, err := generateAccessToken()
+    if err != nil {
+      http.Error(w, http.StatusText(500), 500)
+      return
+    }
+    
+    refresh, err := generateRefreshToken();
+		if err != nil {
+      http.Error(w, http.StatusText(500), 500)
+      return
     }
 
-    if hash, err := s.Encode("cookie-login", sessionValue); err == nil {
-    	fmt.Println()
-    	_, err = cache.Do("SETEX", hash, "120", person.Email)
-			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
+    _, err = cache.Do("SETEX", refresh, "360", person.Email)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 
-      http.SetCookie(w, &http.Cookie{
-				Name:    "cookie-login",
-				Value:   hash,
-				Expires: time.Now().Add(120 * time.Second),
-			})
-    }
+		http.SetCookie(w, &http.Cookie{
+			Name:    "jwt_access",
+			Value:   access,
+			Expires: time.Now().Add(120 * time.Second),
+		})
 
-    generateTokens()
+		http.SetCookie(w, &http.Cookie{
+			Name:    "jwt_refresh",
+			Value:   refresh,
+			Expires: time.Now().Add(360 * time.Second),
+		})
   }
 }
 
-// В дальнейшем вынести в отдельный файл
-func generateTokens() {
-	generateAccessToken()
-	generateRefreshToken()
-}
-
-func generateAccessToken() error {
+func generateAccessToken() (string, error) {
 	accessToken := jwt.New(jwt.SigningMethodHS256)
 	claims := accessToken.Claims.(jwt.MapClaims)
 	claims["name"] = "Gorelov Ruslan"
@@ -146,26 +166,26 @@ func generateAccessToken() error {
   // claims["exp"] = time.Now().Add(time.Hour * 72).Unix()
   claims["exp"] = time.Now().Add(time.Second * 120).Unix()
 
-  t, err := accessToken.SignedString([]byte(os.Getenv("API_SECRET")))
+  t, err := accessToken.SignedString([]byte(os.Getenv("ACCESS_SECRET")))
   if err != nil {
-      return err
+      return "", err
   }
   fmt.Println(t)
-  return nil
+  return t, nil
 }
 
-func generateRefreshToken() error {
+func generateRefreshToken() (string, error) {
 	refreshToken := jwt.New(jwt.SigningMethodHS256)
 	claims := refreshToken.Claims.(jwt.MapClaims)
 	claims["sub"] = 1
   claims["exp"] = time.Now().Add(time.Hour * 2).Unix()
 
-  t, err := refreshToken.SignedString([]byte(os.Getenv("API_SECRET")))
+  t, err := refreshToken.SignedString([]byte(os.Getenv("REFRESH_SECRET")))
   if err != nil {
-      return err
+      return "", err
   }
   fmt.Println(t)
-  return nil
+  return t, nil
 }
 
 
