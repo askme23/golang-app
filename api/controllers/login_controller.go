@@ -78,10 +78,14 @@ func (server *Server) Login(w http.ResponseWriter, r *http.Request) {
   var storePassword string
   row := db.QueryRow("select password from person where email = $1", person.Email)
   err = row.Scan(&storePassword)
-  if err == sql.ErrNoRows {
-    http.Error(w, "Incorrect email or password.", 404)
-    return
-    // hash, _ := Hash(person.Password)
+  if err != nil {
+  	if err == sql.ErrNoRows {
+  		http.Error(w, "Incorrect email or password.", 404)
+  	} else {
+  		http.Error(w, http.StatusText(500), 500)	
+  	}
+
+		// hash, _ := Hash(person.Password)
     // result, err := db.Exec("INSERT INTO person(email, password, when_created, when_updated) VALUES($1, $2, $3, $4)", person.Email, hash, time.Now(), time.Now())
 
     // if err != nil {
@@ -96,8 +100,7 @@ func (server *Server) Login(w http.ResponseWriter, r *http.Request) {
     // }
 
     // fmt.Println("User is added")
-  } else if err != nil {
-    http.Error(w, http.StatusText(500), 500)
+
     return
   }
 
@@ -170,7 +173,6 @@ func generateAccessToken() (string, error) {
   if err != nil {
       return "", err
   }
-  fmt.Println(t)
   return t, nil
 }
 
@@ -184,7 +186,6 @@ func generateRefreshToken() (string, error) {
   if err != nil {
       return "", err
   }
-  fmt.Println(t)
   return t, nil
 }
 
@@ -195,7 +196,6 @@ func (server *Server) SignIn(password string, storePassword string) (string, err
 	if err != nil && err == bcrypt.ErrMismatchedHashAndPassword {
 		return "", err
 	}
-  fmt.Println("Passwords are equal")
 	return "", nil
 }
 
